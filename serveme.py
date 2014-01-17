@@ -13,35 +13,21 @@ import pipes
 class MyRequestHandler(SimpleHTTPRequestHandler):
 
     playing = 0
-    def do_GET(self):
-        """Serve a GET request."""
-        parsed_path = urlparse.urlparse(self.path)
-        print parsed_path.query
-        if parsed_path.query:
-            filetoplay = urlparse.parse_qs(parsed_path.query)['play']
-            self.startProcess(self,filetoplay[0])
-        f = self.send_head()
-        if f:
-            self.copyfile(f, self.wfile)
-            print "Jippieee FFFFFFFF"
-            if (type(f) == type('')):
-                print "Juuhuuuuu STRING"
-                if os.path.isfile(f):
-                    #print "FILE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                    #self.startProcess(f)
-                    test = True
-                elif os.path.isdir(f):
-                    self.copyfile(f, self.wfile)
-            #else:
-            #    self.copyfile(f, self.wfile)
-            #if os.path.isfile(f.getvalue()):
-            #    print "file"
-            #    self.startProcess(f.getvalue())
-            #print f.getvalue()
 
-            	
+    def do_POST(self):
+        """Respond to a POST request."""
+        # Extract and print the contents of the POST
+        length = int(self.headers['Content-Length'])
+        post_data = urlparse.parse_qs(self.rfile.read(length))
 
+        if post_data['action'][0] == "play":
+            self.startProcess(self,post_data['title'][0])
+        elif post_data['action'][0] == "queue":
+            print "Queue " + post_data['title'][0]
 
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
 
 
     def send_head(self):
@@ -55,22 +41,12 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         None, in which case the caller has nothing further to do.
 
         """
-        print self.path
         path = self.translate_path(self.path)
         f = None
         if os.path.isdir(path):
-            #print "Path : " + path
             return self.list_directory(path)
-        if os.path.isfile(path):
-            head, tail = os.path.split(self.path)
-            #print "head: " + head
-            #print "tail: " + tail
-            self.startProcess(path)
-            path = head
-            self.send_response(301)
-            self.send_header('Location', head + "/")
-            self.end_headers()
-        return path
+
+        return f
 
     def list_directory(self, path):
         """Helper to produce a directory listing (absent index.html).
@@ -95,8 +71,26 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
 
         f.write('<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">')
         f.write('<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">')
+        f.write('<script src="//code.jquery.com/jquery-2.0.3.min.js"></script>')
         f.write('<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>')
+        f.write('<script>$(document).ready(function(){\
+            $(".btn").click(function(){\
+                var clickedID = this.id;\
+                if (this.name == "play")\
+                {\
+                    $.post( "/", { action: "play", title: this.id } );\
+                }\
+                else if (this.name == "queue")\
+                {\
+                    $.post( "/", { action: "queue", title: this.id } );\
+                }\
+                \
+                });\
+            })</script>')
         f.write("<title>Directory listing for %s</title>\n" % self.path)
+        f.write('<div class="container">')
+        f.write('<div class="row">')
+        f.write('<div class="col-xs-12">')
         f.write('<div class="panel panel-default">')
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
         f.write('<div class="panel-body"><span class="badge">%s</span></div>' % (self.playing))
@@ -129,10 +123,14 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 else:
                     if os.path.splitext(name)[-1].lower() in ('.mp3', '.mp4'):
                         if parsed_path.query:
-                            f.write('<a href="%s" class="list-group-item">%s<i class="glyphicon glyphicon-time></a>\n' % (self.path, displayname))
+                            f.write('<li class="list-group-item"><span>%s</span><i class="glyphicon glyphicon-time></a><button type="button" id="mama" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, displayname))
                         else:
-                            f.write('<a href="%s?play=%s" class="list-group-item">%s <span class="glyphicon glyphicon-time"></span></a>\n' % (self.path, fullname, displayname))
+                            #f.write('<a href="%s?play=%s" class="list-group-item">%s <span class="glyphicon glyphicon-time"></span></a><button type="button" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, fullname, displayname))
+                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default btn-sm queue"><span class="glyphicon glyphicon-time"></span></button></div>\n' % (displayname, fullname, fullname))
         f.write("</ul>\n<hr>\n")
+        f.write("</div>\n")
+        f.write("</div>\n")
+        f.write("</div>\n")
         f.write("</div>\n")
         f.seek(0)
         self.send_response(200)
@@ -167,11 +165,5 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
 
         return 1
 
-    
-
-
-
-
 server = HTTPServer(("0.0.0.0", 8000), MyRequestHandler)
-
 server.serve_forever()
