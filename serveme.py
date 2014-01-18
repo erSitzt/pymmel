@@ -135,10 +135,8 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="panel-body"><span class="badge">%s</span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
         f.write('<ul class="list-group">\n')
         currentpath = urlparse.urlparse(self.path).path
-        #print "CURRENTPATH : " + currentpath
         currentpath = re.sub("/$", "", currentpath)
         dirup, removed = os.path.split(currentpath)
-        #print "DIRUP : " + dirup + " REMOVED : " + removed
         f.write('<b><a href="%s" class="list-group-item">.. up one directory</a></b>\n' % (dirup))
         for name in list:
             if not name.startswith('.'):
