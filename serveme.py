@@ -18,8 +18,6 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
     volume = mixer.getvolume()[0]
     mute = mixer.getmute()[0]
 
-    print "VOLUME %d" % mixer.getvolume()[0]
-    print "VOLUME %d" % volume
     def do_POST(self):
         """Respond to a POST request."""
         # Extract and print the contents of the POST
@@ -35,12 +33,9 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         elif post_data['action'][0] == "mute":
             print "MUTESTATUS : %d" % MyRequestHandler.mute
             if MyRequestHandler.mute == 1:
-                print "unmute"
                 MyRequestHandler.mute = 0
-                print "MUTESTATUS : %d" % MyRequestHandler.mute
                 MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
             else:
-                print "mute"
                 MyRequestHandler.mute = 1
                 MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
         elif post_data['action'][0] == "volup":
@@ -51,8 +46,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             if MyRequestHandler.volume >= 5:
                 MyRequestHandler.volume = MyRequestHandler.volume - 5
                 MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
-        print "VOLUME %d" % MyRequestHandler.mixer.getvolume()[0]
-        print "VOL %d" % MyRequestHandler.volume
+
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
