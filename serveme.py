@@ -176,19 +176,15 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         return f
 
     def startProcess(self, name, path):
-        pathname, filename = os.path.split(path)
-        MyRequestHandler.playing = filename
-        print "STARTPATH : " + path
-
-
         """
         Starts a process in the background and writes a PID file
 
         returns integer: pid
         """
-        os.system('pkill omxplayer.bin')
-        os.system('pkill mpg123')
 
+        pathname, filename = os.path.split(path)
+        MyRequestHandler.playing = filename
+        self.stopAllPlayers()
         ext = os.path.splitext(path)[-1].lower()
         if ext in ('.mp3', '.wav'):
             print "mpg123 " + path
@@ -196,15 +192,11 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         elif ext in ('.mp4', ):
             print "omxplayer " + path
             process = subprocess.Popen(['/usr/bin/omxplayer' , path] , shell=False)
-
         return 1
 
     def stopAllPlayers(self):
         os.system('pkill omxplayer.bin')
         os.system('pkill mpg123')
-
-
-
 
 server = HTTPServer(("0.0.0.0", 8000), MyRequestHandler)
 server.serve_forever()
