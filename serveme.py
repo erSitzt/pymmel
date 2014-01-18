@@ -102,6 +102,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 if (this.name == "play")\
                 {\
                     $.post( "/", { action: "play", title: this.id } );\
+                    $("#nowplaying").html(this.id);\
                 }\
                 else if (this.name == "queue")\
                 {\
@@ -132,7 +133,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="col-xs-12">')
         f.write('<div class="panel panel-default">')
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
-        f.write('<div class="panel-body"><span class="badge">%s</span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
+        f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
         f.write('<ul class="list-group">\n')
         currentpath = urlparse.urlparse(self.path).path
         currentpath = re.sub("/$", "", currentpath)
@@ -163,7 +164,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                             f.write('<li class="list-group-item"><span>%s</span><i class="glyphicon glyphicon-time></a><button type="button" id="mama" class="btn btn-default btn-xs pull-right">enqueue</button></li>\n' % (self.path, displayname))
                         else:
                             #f.write('<a href="%s?play=%s" class="list-group-item">%s <span class="glyphicon glyphicon-time"></span></a><button type="button" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, fullname, displayname))
-                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default btn-sm queue"><span class="glyphicon glyphicon-time"></span></button></div></li>\n' % (displayname, fullname, fullname))
+                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default queue"><span class="glyphicon glyphicon-time"></span></button></div></li>\n' % (displayname, fullname, fullname))
         f.write("</ul>\n<hr>\n")
         f.write("</div>\n")
         f.write("</div>\n")
