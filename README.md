@@ -2,6 +2,7 @@ pymmel
 ======
 
 Micro mediacenter w. webinterface for raspberry pi without an X-server
+Webinterface using twitter bootstrap.
 
 This is only a slightly modified version of the SimpleHTTPServer that can be run by python out of the box, serving you files from the directory you started it in.
 
