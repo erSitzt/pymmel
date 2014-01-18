@@ -9,11 +9,17 @@ import cgi
 import re
 import urllib2
 import pipes
+import alsaaudio
 
 class MyRequestHandler(SimpleHTTPRequestHandler):
 
+    mixer = alsaaudio.Mixer("PCM")
     playing = 0
+    volume = mixer.getvolume()[0]
+    mute = mixer.getmute()[0]
 
+    print "VOLUME %d" % mixer.getvolume()[0]
+    print "VOLUME %d" % volume
     def do_POST(self):
         """Respond to a POST request."""
         # Extract and print the contents of the POST
@@ -24,6 +30,29 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             self.startProcess(self,post_data['title'][0])
         elif post_data['action'][0] == "queue":
             print "Queue " + post_data['title'][0]
+        elif post_data['action'][0] == "stop":
+            self.stopAllPlayers()
+        elif post_data['action'][0] == "mute":
+            print "MUTESTATUS : %d" % MyRequestHandler.mute
+            if MyRequestHandler.mute == 1:
+                print "unmute"
+                MyRequestHandler.mute = 0
+                print "MUTESTATUS : %d" % MyRequestHandler.mute
+                MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
+            else:
+                print "mute"
+                MyRequestHandler.mute = 1
+                MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
+        elif post_data['action'][0] == "volup":
+            if MyRequestHandler.volume <= 95:
+                MyRequestHandler.volume = MyRequestHandler.volume + 5
+                MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
+        elif post_data['action'][0] == "voldown":
+            if MyRequestHandler.volume >= 5:
+                MyRequestHandler.volume = MyRequestHandler.volume - 5
+                MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
+        print "VOLUME %d" % MyRequestHandler.mixer.getvolume()[0]
+        print "VOL %d" % MyRequestHandler.volume
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -84,6 +113,22 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 {\
                     $.post( "/", { action: "queue", title: this.id } );\
                 }\
+                else if (this.name == "stop")\
+                {\
+                    $.post( "/", { action: "stop" } );\
+                }\
+                else if (this.name == "mute")\
+                {\
+                    $.post( "/", { action: "mute" } );\
+                }\
+                else if (this.name == "volup")\
+                {\
+                    $.post( "/", { action: "volup" } );\
+                }\
+                else if (this.name == "voldown")\
+                {\
+                    $.post( "/", { action: "voldown" } );\
+                }\
                 \
                 });\
             })</script>')
@@ -93,7 +138,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="col-xs-12">')
         f.write('<div class="panel panel-default">')
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
-        f.write('<div class="panel-body"><span class="badge">%s</span></div>' % (self.playing))
+        f.write('<div class="panel-body"><span class="badge">%s</span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
         f.write('<ul class="list-group">\n')
         currentpath = urlparse.urlparse(self.path).path
         #print "CURRENTPATH : " + currentpath
@@ -123,10 +168,10 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 else:
                     if os.path.splitext(name)[-1].lower() in ('.mp3', '.mp4'):
                         if parsed_path.query:
-                            f.write('<li class="list-group-item"><span>%s</span><i class="glyphicon glyphicon-time></a><button type="button" id="mama" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, displayname))
+                            f.write('<li class="list-group-item"><span>%s</span><i class="glyphicon glyphicon-time></a><button type="button" id="mama" class="btn btn-default btn-xs pull-right">enqueue</button></li>\n' % (self.path, displayname))
                         else:
                             #f.write('<a href="%s?play=%s" class="list-group-item">%s <span class="glyphicon glyphicon-time"></span></a><button type="button" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, fullname, displayname))
-                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default btn-sm queue"><span class="glyphicon glyphicon-time"></span></button></div>\n' % (displayname, fullname, fullname))
+                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default btn-sm queue"><span class="glyphicon glyphicon-time"></span></button></div></li>\n' % (displayname, fullname, fullname))
         f.write("</ul>\n<hr>\n")
         f.write("</div>\n")
         f.write("</div>\n")
@@ -160,10 +205,14 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             print "omxplayer " + path
             process = subprocess.Popen(['/usr/bin/omxplayer' , path] , shell=False)
 
-
-
-
         return 1
+
+    def stopAllPlayers(self):
+        os.system('pkill omxplayer.bin')
+        os.system('pkill mpg123')
+
+
+
 
 server = HTTPServer(("0.0.0.0", 8000), MyRequestHandler)
 server.serve_forever()
