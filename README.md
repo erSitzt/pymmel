@@ -24,3 +24,22 @@ TODO:
 * wakeup tv/beamer with tvservice
 * slideshow for images using fbi or something
 
+
+Use it as a service with upstart (`apt-get install upstart` and ignore some warnings on raspbian )
+create an upstart script  `/etc/init/pymmel.conf`
+
+Change the paths to the basedir where you put serveme.py. Inside that dir you can create symlinks or mount network shares.
+
+`
+description "Pymmel Initscript"
+author "me"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+chdir /home/pi
+exec /usr/bin/python /home/pi/test/serveme.py
+respawn
+
+`
+
