@@ -19,3 +19,8 @@ Requirements:
 
 The programs used for video, music or any additional types of files can be altered quite easily
 
+TODO:
+* Playlist
+* wakeup tv/beamer with tvservice
+* slideshow for images using fbi or something
+
