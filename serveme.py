@@ -133,7 +133,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="col-xs-12">')
         f.write('<div class="panel panel-default">')
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
-        f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
+        f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-primary "><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-primary "><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-primary "><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-primary"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
         f.write('<ul class="list-group">\n')
         currentpath = urlparse.urlparse(self.path).path
         currentpath = re.sub("/$", "", currentpath)
@@ -159,13 +159,13 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 if (dir or link):
                     f.write('<a href="%s" class="list-group-item"><b>%s</b></a>\n' % (linkname, displayname))
                 else:
-                    if os.path.splitext(name)[-1].lower() in ('.mp3', '.mp4'):
+                    if os.path.splitext(name)[-1].lower() in ('.mp3', '.mp4', '.mkv', '.mpg', '.avi', '.wmv'):
                         if parsed_path.query:
                             f.write('<li class="list-group-item"><span>%s</span><i class="glyphicon glyphicon-time></a><button type="button" id="mama" class="btn btn-default btn-xs pull-right">enqueue</button></li>\n' % (self.path, displayname))
                         else:
                             #f.write('<a href="%s?play=%s" class="list-group-item">%s <span class="glyphicon glyphicon-time"></span></a><button type="button" class="btn btn-default btn-xs pull-right">enqueue</button>\n' % (self.path, fullname, displayname))
-                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-default"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default queue"><span class="glyphicon glyphicon-time"></span></button></div></li>\n' % (displayname, fullname, fullname))
-        f.write("</ul>\n<hr>\n")
+                            f.write('<li class="list-group-item">%s<div class="btn-group pull-right"><button type="button" name="play" id="%s" class="btn btn-success"><span class="glyphicon glyphicon-play"></span></button><button type="button" name="queue" id="%s" class="btn btn-default queue"><span class="glyphicon glyphicon-time"></span></button></div></li>\n' % (displayname, fullname, fullname))
+        f.write("</ul>\n")
         f.write("</div>\n")
         f.write("</div>\n")
         f.write("</div>\n")
@@ -190,7 +190,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         if ext in ('.mp3', '.wav'):
             print "mpg123 " + path
             process = subprocess.Popen(['/usr/bin/mpg123' , '-q', path] , shell=False)
-        elif ext in ('.mp4', ):
+        elif ext in ('.mp4', '.mkv', '.mpg', '.avi', '.wmv'):
             print "omxplayer " + path
             process = subprocess.Popen(['/usr/bin/omxplayer' , path] , shell=False)
         return 1
