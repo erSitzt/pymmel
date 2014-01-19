@@ -30,16 +30,15 @@ create an upstart script  `/etc/init/pymmel.conf`
 
 Change the paths to the basedir where you put serveme.py. Inside that dir you can create symlinks or mount network shares.
 
-`
-description "Pymmel Initscript"
-author "me"
 
-start on runlevel [2345]
-stop on runlevel [!2345]
+    description "Pymmel Initscript"
+    author "me"
 
-chdir /home/pi
-exec /usr/bin/python /home/pi/test/serveme.py
-respawn
+    start on runlevel [2345]
+    stop on runlevel [!2345]
 
-`
+    chdir /home/pi
+    exec /usr/bin/python /home/pi/test/serveme.py
+    respawn
+
 
