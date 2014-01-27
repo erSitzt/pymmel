@@ -63,6 +63,14 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             if MyRequestHandler.process is not None:
                 MyRequestHandler.process.stdin.write("\x1B[A")
 
+        elif post_data['action'][0] == "smallforward":
+            if MyRequestHandler.process is not None:
+                MyRequestHandler.process.stdin.write("\x1B[C")
+
+        elif post_data['action'][0] == "smallback":
+            if MyRequestHandler.process is not None:
+                MyRequestHandler.process.stdin.write("\x1B[D")
+
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
@@ -148,6 +156,14 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 {\
                     $.post( "/", { action: "forward" } );\
                 }\
+                else if (this.name == "smallforward")\
+                {\
+                    $.post( "/", { action: "smallforward" } );\
+                }\
+                else if (this.name == "smallback")\
+                {\
+                    $.post( "/", { action: "smallback" } );\
+                }\
                 \
                 });\
             })</script>')
@@ -159,6 +175,8 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
         f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right">\
             <button type="button" name="back" class="btn btn-primary "><span class="glyphicon glyphicon-fast-backward" id="back"></span></button>\
+            <button type="button" name="smallback" class="btn btn-primary "><span class="glyphicon glyphicon-backward" id="smallback"></span></button>\
+            <button type="button" name="smallforward" class="btn btn-primary "><span class="glyphicon glyphicon-forward" id="smallforward"></span></button>\
             <button type="button" name="forward" class="btn btn-primary "><span class="glyphicon glyphicon-fast-forward" id="forward"></span></button>\
             <button type="button" name="stop" class="btn btn-primary "><span class="glyphicon glyphicon-stop" id="stop"></span></button>\
             <button type="button" name="volup" class="btn btn-primary "><span class="glyphicon glyphicon-volume-up"></span></button>\
