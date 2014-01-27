@@ -3,20 +3,21 @@ from BaseHTTPServer import HTTPServer
 from StringIO import StringIO
 import subprocess
 import os
-import cStringIO
+#import cStringIO
 import urlparse
 import cgi
 import re
 import urllib2
 import pipes
-import alsaaudio
+#import alsaaudio
 
 class MyRequestHandler(SimpleHTTPRequestHandler):
 
-    mixer = alsaaudio.Mixer("PCM")
+    #mixer = alsaaudio.Mixer("PCM")
     playing = 0
-    volume = mixer.getvolume()[0]
-    mute = mixer.getmute()[0]
+    #volume = mixer.getvolume()[0]
+    #mute = mixer.getmute()[0]
+    process = None
 
     def do_POST(self):
         """Respond to a POST request."""
@@ -29,24 +30,38 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         elif post_data['action'][0] == "queue":
             print "Queue " + post_data['title'][0]
         elif post_data['action'][0] == "stop":
-            self.stopAllPlayers()
+            #self.stopAllPlayers()
+            if MyRequestHandler.process is not None:
+            	stop = MyRequestHandler.process.stdin.write('p')
         elif post_data['action'][0] == "mute":
-            print "MUTESTATUS : %d" % MyRequestHandler.mute
-            if MyRequestHandler.mute == 1:
-                MyRequestHandler.mute = 0
-                MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
-            else:
-                MyRequestHandler.mute = 1
-                MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
+        	if MyRequestHandler.process is not None:
+        		MyRequestHandler.process.stdin.write('-')
+            #print "MUTESTATUS : %d" % MyRequestHandler.mute
+            #if MyRequestHandler.mute == 1:
+            #    MyRequestHandler.mute = 0
+            #    MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
+            #else:
+            #    MyRequestHandler.mute = 1
+            #    MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
         elif post_data['action'][0] == "volup":
-            if MyRequestHandler.volume <= 95:
-                MyRequestHandler.volume = MyRequestHandler.volume + 5
-                MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
+        	if MyRequestHandler.process is not None:
+        		MyRequestHandler.process.stdin.write('+')
+            #if MyRequestHandler.volume <= 95:
+            #    MyRequestHandler.volume = MyRequestHandler.volume + 5
+            #   MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
         elif post_data['action'][0] == "voldown":
-            if MyRequestHandler.volume >= 5:
-                MyRequestHandler.volume = MyRequestHandler.volume - 5
-                MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
+        	if MyRequestHandler.process is not None:
+        		MyRequestHandler.process.stdin.write('-')
+            #if MyRequestHandler.volume >= 5:
+            #    MyRequestHandler.volume = MyRequestHandler.volume - 5
+            #    MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
+        elif post_data['action'][0] == "back":
+            if MyRequestHandler.process is not None:
+                MyRequestHandler.process.stdin.write("\x1B[B")
 
+        elif post_data['action'][0] == "forward":
+            if MyRequestHandler.process is not None:
+                MyRequestHandler.process.stdin.write("\x1B[A")
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -110,6 +125,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 }\
                 else if (this.name == "stop")\
                 {\
+                	$(this).find("span").toggleClass("glyphicon glyphicon-pause glyphicon glyphicon-play");\
                     $.post( "/", { action: "stop" } );\
                 }\
                 else if (this.name == "mute")\
@@ -124,6 +140,14 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
                 {\
                     $.post( "/", { action: "voldown" } );\
                 }\
+                else if (this.name == "back")\
+                {\
+                    $.post( "/", { action: "back" } );\
+                }\
+                else if (this.name == "forward")\
+                {\
+                    $.post( "/", { action: "forward" } );\
+                }\
                 \
                 });\
             })</script>')
@@ -133,7 +157,13 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         f.write('<div class="col-xs-12">')
         f.write('<div class="panel panel-default">')
         f.write('<div class="panel-heading"><span class="label label-default">%s</span></div>\n' % (self.path))
-        f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right"><button type="button" name="stop" class="btn btn-primary "><span class="glyphicon glyphicon-stop"></span></button><button type="button" name="volup" class="btn btn-primary "><span class="glyphicon glyphicon-volume-up"><button type="button" name="voldown" class="btn btn-primary "><span class="glyphicon glyphicon-volume-down"><button type="button" name="mute" class="btn btn-primary"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
+        f.write('<div class="panel-body"><span class="badge"><span id="nowplaying">%s</span></span><div class="btn-group pull-right">\
+            <button type="button" name="back" class="btn btn-primary "><span class="glyphicon glyphicon-fast-backward" id="back"></span></button>\
+            <button type="button" name="forward" class="btn btn-primary "><span class="glyphicon glyphicon-fast-forward" id="forward"></span></button>\
+            <button type="button" name="stop" class="btn btn-primary "><span class="glyphicon glyphicon-stop" id="stop"></span></button>\
+            <button type="button" name="volup" class="btn btn-primary "><span class="glyphicon glyphicon-volume-up"></span></button>\
+            <button type="button" name="voldown" class="btn btn-primary "><span class="glyphicon glyphicon-volume-down"></span></button>\
+            <button type="button" name="mute" class="btn btn-primary"><span class="glyphicon glyphicon-volume-off"></span></button></div></div>' % (self.playing))
         f.write('<ul class="list-group">\n')
         currentpath = urlparse.urlparse(self.path).path
         currentpath = re.sub("/$", "", currentpath)
@@ -185,19 +215,18 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
 
         pathname, filename = os.path.split(path)
         MyRequestHandler.playing = filename
-        self.stopAllPlayers()
+        #self.stopAllPlayers()
+        if MyRequestHandler.process is not None:
+        	MyRequestHandler.process.stdin.write('q')
+        	MyRequestHandler.process = None
         ext = os.path.splitext(path)[-1].lower()
-        if ext in ('.mp3', '.wav'):
-            print "mpg123 " + path
-            process = subprocess.Popen(['/usr/bin/mpg123' , '-q', path] , shell=False)
-        elif ext in ('.mp4', '.mkv', '.mpg', '.avi', '.wmv'):
+        if ext in ('.mp4', '.mkv', '.mpg', '.avi', '.wmv', '.mp3', '.wav'):
             print "omxplayer " + path
-            process = subprocess.Popen(['/usr/bin/omxplayer' , path] , shell=False)
+            MyRequestHandler.process = subprocess.Popen(['/usr/bin/omxplayer' , path] , stdin=subprocess.PIPE, shell=False)
         return 1
 
     def stopAllPlayers(self):
         os.system('pkill omxplayer.bin')
-        os.system('pkill mpg123')
 
-server = HTTPServer(("0.0.0.0", 8000), MyRequestHandler)
+server = HTTPServer(("0.0.0.0", 8001), MyRequestHandler)
 server.serve_forever()
