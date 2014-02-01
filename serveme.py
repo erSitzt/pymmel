@@ -3,12 +3,16 @@ from BaseHTTPServer import HTTPServer
 from StringIO import StringIO
 import subprocess
 import os
-#import cStringIO
+import threading
 import urlparse
 import cgi
 import re
 import urllib2
 import pipes
+import tempfile
+import Queue
+import time
+
 #import alsaaudio
 
 class MyRequestHandler(SimpleHTTPRequestHandler):
@@ -18,58 +22,43 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
     #volume = mixer.getvolume()[0]
     #mute = mixer.getmute()[0]
     process = None
+    tempplaylistfile = None
 
     def do_POST(self):
         """Respond to a POST request."""
         # Extract and print the contents of the POST
         length = int(self.headers['Content-Length'])
         post_data = urlparse.parse_qs(self.rfile.read(length))
-
+        
         if post_data['action'][0] == "play":
-            self.startProcess(self,post_data['title'][0])
+            #self.startProcess(self,post_data['title'][0])
+            OMXThread.Actions.put({"play" : post_data['title'][0]})
         elif post_data['action'][0] == "queue":
+            MyRequestHandler.tempplaylistfile = tempfile.NamedTemporaryFile('w+b', -1 ,'.m3u')
+            MyRequestHandler.tempplaylistfile.write(str(post_data['title'][0])+'\n')
             print "Queue " + post_data['title'][0]
-        elif post_data['action'][0] == "stop":
-            #self.stopAllPlayers()
-            if MyRequestHandler.process is not None:
-            	stop = MyRequestHandler.process.stdin.write('p')
-        elif post_data['action'][0] == "mute":
-        	if MyRequestHandler.process is not None:
-        		MyRequestHandler.process.stdin.write('-')
-            #print "MUTESTATUS : %d" % MyRequestHandler.mute
-            #if MyRequestHandler.mute == 1:
-            #    MyRequestHandler.mute = 0
-            #    MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
-            #else:
-            #    MyRequestHandler.mute = 1
-            #    MyRequestHandler.mixer.setmute(MyRequestHandler.mute)
-        elif post_data['action'][0] == "volup":
-        	if MyRequestHandler.process is not None:
-        		MyRequestHandler.process.stdin.write('+')
-            #if MyRequestHandler.volume <= 95:
-            #    MyRequestHandler.volume = MyRequestHandler.volume + 5
-            #   MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
-        elif post_data['action'][0] == "voldown":
-        	if MyRequestHandler.process is not None:
-        		MyRequestHandler.process.stdin.write('-')
-            #if MyRequestHandler.volume >= 5:
-            #    MyRequestHandler.volume = MyRequestHandler.volume - 5
-            #    MyRequestHandler.mixer.setvolume(MyRequestHandler.volume)
-        elif post_data['action'][0] == "back":
-            if MyRequestHandler.process is not None:
-                MyRequestHandler.process.stdin.write("\x1B[B")
-
-        elif post_data['action'][0] == "forward":
-            if MyRequestHandler.process is not None:
-                MyRequestHandler.process.stdin.write("\x1B[A")
-
-        elif post_data['action'][0] == "smallforward":
-            if MyRequestHandler.process is not None:
-                MyRequestHandler.process.stdin.write("\x1B[C")
-
-        elif post_data['action'][0] == "smallback":
-            if MyRequestHandler.process is not None:
-                MyRequestHandler.process.stdin.write("\x1B[D")
+            OMXThread.Playlist.put(post_data['title'][0])
+            OMXThread.Actions.put({"queue" : post_data['title'][0]})
+        if MyRequestHandler.process is not None:
+            MyRequestHandler.process.poll()
+            print "RETCODE : " + str(MyRequestHandler.process.returncode)
+            if MyRequestHandler.process.returncode is None:
+                if post_data['action'][0] == "stop":
+                        stop = MyRequestHandler.process.stdin.write('p')
+                elif post_data['action'][0] == "mute":
+                        MyRequestHandler.process.stdin.write('-')
+                elif post_data['action'][0] == "volup":
+                        MyRequestHandler.process.stdin.write('+')
+                elif post_data['action'][0] == "voldown":
+                        MyRequestHandler.process.stdin.write('-')
+                elif post_data['action'][0] == "back":
+                        MyRequestHandler.process.stdin.write("\x1B[B")
+                elif post_data['action'][0] == "forward":
+                        MyRequestHandler.process.stdin.write("\x1B[A")
+                elif post_data['action'][0] == "smallforward":
+                        MyRequestHandler.process.stdin.write("\x1B[C")
+                elif post_data['action'][0] == "smallback":
+                        MyRequestHandler.process.stdin.write("\x1B[D")
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -224,7 +213,7 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         return f
 
-    def startProcess(self, name, path):
+    def teststartProcess(self, name, path):
         """
         Starts a process in the background and writes a PID file
 
@@ -235,8 +224,11 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
         MyRequestHandler.playing = filename
         #self.stopAllPlayers()
         if MyRequestHandler.process is not None:
-        	MyRequestHandler.process.stdin.write('q')
-        	MyRequestHandler.process = None
+            MyRequestHandler.process.poll()
+            print "RETCODE2 : " + str(MyRequestHandler.process.returncode)
+            if MyRequestHandler.process.returncode is None:
+                MyRequestHandler.process.stdin.write('q')
+                MyRequestHandler.process = None
         ext = os.path.splitext(path)[-1].lower()
         if ext in ('.mp4', '.mkv', '.mpg', '.avi', '.wmv', '.mp3', '.wav'):
             print "omxplayer " + path
@@ -245,6 +237,68 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
 
     def stopAllPlayers(self):
         os.system('pkill omxplayer.bin')
+
+class OMXThread(threading.Thread):
+    Actions = Queue.Queue()
+    Playlist = Queue.Queue()
+
+    omxprocess = None
+
+    def run(self):
+        while True:
+            if OMXThread.omxprocess is not None:
+                OMXThread.omxprocess.poll()
+                if OMXThread.omxprocess.returncode is not None:
+                    print "titel zu ende!"
+                    try:
+                        title = OMXThread.Playlist.get(False)
+                    except Queue.Empty:
+                        pass
+                    else:
+                        print title
+                        self.startProcess(title)
+                        OMXThread.Playlist.task_done()
+
+            try:
+                action = OMXThread.Actions.get(False)
+            except Queue.Empty:
+                pass
+            else:
+                print action
+                if "play" in action:
+                    self.startProcess(action["play"])
+
+                OMXThread.Actions.task_done()
+            time.sleep(1)
+
+
+
+
+    def startProcess(self, path):
+        """
+        Starts a process in the background and writes a PID file
+
+        returns integer: pid
+        """
+
+        pathname, filename = os.path.split(path)
+        MyRequestHandler.playing = filename
+        #self.stopAllPlayers()
+        if MyRequestHandler.process is not None:
+            MyRequestHandler.process.poll()
+            print "RETCODE2 : " + str(MyRequestHandler.process.returncode)
+            if MyRequestHandler.process.returncode is None:
+                MyRequestHandler.process.stdin.write('q')
+                MyRequestHandler.process = None
+        ext = os.path.splitext(path)[-1].lower()
+        if ext in ('.mp4', '.mkv', '.mpg', '.avi', '.wmv', '.mp3', '.wav'):
+            print "omxplayer " + path
+            OMXThread.omxprocess = subprocess.Popen(['/usr/bin/omxplayer' , path] , stdin=subprocess.PIPE, shell=False)
+        return 1
+
+thread = OMXThread()
+thread.setDaemon(True)
+thread.start()
 
 server = HTTPServer(("0.0.0.0", 8001), MyRequestHandler)
 server.serve_forever()
