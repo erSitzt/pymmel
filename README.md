@@ -12,15 +12,12 @@ You probably should not make this accessible from the internet !?!ß!
 
 Requirements:
 * Python 2.7
-* python-alsaaudio
-* omxplayer (for fullhd framebuffer video)
-* mpg123 (for music)
+* omxplayer (for music and fullhd framebuffer video )
 * maybe more :)
 
 The programs used for video, music or any additional types of files can be altered quite easily
 
 TODO:
-* Playlist
 * wakeup tv/beamer with tvservice
 * slideshow for images using fbi or something
 
