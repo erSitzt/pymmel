@@ -34,31 +34,24 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             #self.startProcess(self,post_data['title'][0])
             OMXThread.Actions.put({"play" : post_data['title'][0]})
         elif post_data['action'][0] == "queue":
-            MyRequestHandler.tempplaylistfile = tempfile.NamedTemporaryFile('w+b', -1 ,'.m3u')
-            MyRequestHandler.tempplaylistfile.write(str(post_data['title'][0])+'\n')
             print "Queue " + post_data['title'][0]
-            OMXThread.Playlist.put(post_data['title'][0])
             OMXThread.Actions.put({"queue" : post_data['title'][0]})
-        if MyRequestHandler.process is not None:
-            MyRequestHandler.process.poll()
-            print "RETCODE : " + str(MyRequestHandler.process.returncode)
-            if MyRequestHandler.process.returncode is None:
-                if post_data['action'][0] == "stop":
-                        stop = MyRequestHandler.process.stdin.write('p')
-                elif post_data['action'][0] == "mute":
-                        MyRequestHandler.process.stdin.write('-')
-                elif post_data['action'][0] == "volup":
-                        MyRequestHandler.process.stdin.write('+')
-                elif post_data['action'][0] == "voldown":
-                        MyRequestHandler.process.stdin.write('-')
-                elif post_data['action'][0] == "back":
-                        MyRequestHandler.process.stdin.write("\x1B[B")
-                elif post_data['action'][0] == "forward":
-                        MyRequestHandler.process.stdin.write("\x1B[A")
-                elif post_data['action'][0] == "smallforward":
-                        MyRequestHandler.process.stdin.write("\x1B[C")
-                elif post_data['action'][0] == "smallback":
-                        MyRequestHandler.process.stdin.write("\x1B[D")
+        elif post_data['action'][0] == "stop":
+            OMXThread.Actions.put({"stop" : "dummy"})
+        elif post_data['action'][0] == "mute":
+            OMXThread.Actions.put({"mute" : "dummy"})
+        elif post_data['action'][0] == "volup":
+            OMXThread.Actions.put({"volup" : "dummy"})
+        elif post_data['action'][0] == "voldown":
+            OMXThread.Actions.put({"voldown" : "dummy"})
+        elif post_data['action'][0] == "back":
+            OMXThread.Actions.put({"back" : "dummy"})
+        elif post_data['action'][0] == "forward":
+            OMXThread.Actions.put({"forward" : "dummy"})
+        elif post_data['action'][0] == "smallforward":
+            OMXThread.Actions.put({"smallforward" : "dummy"})
+        elif post_data['action'][0] == "smallback":
+            OMXThread.Actions.put({"smallback" : "dummy"})
 
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -267,6 +260,28 @@ class OMXThread(threading.Thread):
                 print action
                 if "play" in action:
                     self.startProcess(action["play"])
+                elif "queue" in action:
+                    OMXThread.Playlist.put(action["queue"])
+                else:
+                    if OMXThread.omxprocess is not None:    
+                        if "stop" in action:
+                            OMXThread.omxprocess.stdin.write('p')
+                        elif "mute" in action:
+                            OMXThread.omxprocess.stdin.write('-')
+                        elif "volup" in action:
+                            OMXThread.omxprocess.stdin.write('+')
+                        elif "voldown" in action:
+                            OMXThread.omxprocess.stdin.write('-')
+                        elif "back" in action:
+                            OMXThread.omxprocess.stdin.write("\x1B[B")
+                        elif "forward" in action:
+                            OMXThread.omxprocess.stdin.write("\x1B[A")    
+                        elif "smallforward" in action:
+                            OMXThread.omxprocess.stdin.write("\x1B[C")
+                        elif "smallback" in action:
+                            OMXThread.omxprocess.stdin.write("\x1B[D")
+
+
 
                 OMXThread.Actions.task_done()
             time.sleep(1)
